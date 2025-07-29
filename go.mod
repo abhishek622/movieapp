@@ -2,7 +2,10 @@ module github.com/abhishek622/movieapp
 
 go 1.24.2
 
-require github.com/hashicorp/consul/api v1.32.1
+require (
+	github.com/hashicorp/consul/api v1.32.1
+	google.golang.org/protobuf v1.36.6
+)
 
 require (
 	github.com/armon/go-metrics v0.4.1 // indirect
