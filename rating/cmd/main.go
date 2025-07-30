@@ -13,8 +13,7 @@ import (
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"github.com/abhishek622/movieapp/rating/internal/controller/rating"
 	grpchandler "github.com/abhishek622/movieapp/rating/internal/handler/grpc"
-	"github.com/abhishek622/movieapp/rating/internal/ingester/kafka"
-	"github.com/abhishek622/movieapp/rating/internal/repository/memory"
+	"github.com/abhishek622/movieapp/rating/internal/repository/mysql"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -44,15 +43,11 @@ func main() {
 		}
 	}()
 	defer registry.Deregister(ctx, instanceID, serviceName)
-	repo := memory.New()
-	ingester, err := kafka.NewIngester("localhost", "rating", "ratings")
+	repo, err := mysql.New()
 	if err != nil {
-		log.Fatalf("failed to initialize ingester: %v", err)
+		panic(err)
 	}
-	ctrl := rating.New(repo, ingester)
-	if err := ctrl.StartIngestion(ctx); err != nil {
-		log.Fatalf("failed to start ingestion: %v", err)
-	}
+	ctrl := rating.New(repo, nil)
 	h := grpchandler.New(ctrl)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%v", port))
 	if err != nil {

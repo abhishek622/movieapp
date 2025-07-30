@@ -12,6 +12,7 @@ import (
 	"github.com/abhishek622/movieapp/metadata/internal/controller/metadata"
 	grpchandler "github.com/abhishek622/movieapp/metadata/internal/handler/grpc"
 	"github.com/abhishek622/movieapp/metadata/internal/repository/memory"
+	"github.com/abhishek622/movieapp/metadata/internal/repository/mysql"
 	"github.com/abhishek622/movieapp/pkg/discovery"
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"google.golang.org/grpc"
@@ -43,8 +44,12 @@ func main() {
 		}
 	}()
 	defer registry.Deregister(ctx, instanceID, serviceName)
-	repo := memory.New()
-	ctrl := metadata.New(repo)
+	repo, err := mysql.New()
+	if err != nil {
+		panic(err)
+	}
+	cache := memory.New()
+	ctrl := metadata.New(repo, cache)
 	// h := httphandler.New(ctrl)
 	// http.Handle("/metadata", http.HandlerFunc(h.GetMetadata))
 	// if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
