@@ -13,7 +13,7 @@ import (
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"github.com/abhishek622/movieapp/rating/internal/controller/rating"
 	grpchandler "github.com/abhishek622/movieapp/rating/internal/handler/grpc"
-	"github.com/abhishek622/movieapp/rating/internal/repository/mysql"
+	"github.com/abhishek622/movieapp/rating/internal/repository/memory"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/yaml.v3"
@@ -32,6 +32,7 @@ func main() {
 	}
 	port := cfg.API.Port
 	log.Printf("Starting the rating service on port %d", port)
+
 	registry, err := consul.NewRegistry(cfg.ServiceDiscovery.Consul.Address)
 	if err != nil {
 		panic(err)
@@ -50,10 +51,7 @@ func main() {
 		}
 	}()
 	defer registry.Deregister(ctx, instanceID, serviceName)
-	repo, err := mysql.New()
-	if err != nil {
-		panic(err)
-	}
+	repo := memory.New()
 	ctrl := rating.New(repo, nil)
 	h := grpchandler.New(ctrl)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%v", port))

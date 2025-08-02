@@ -12,7 +12,6 @@ import (
 	"github.com/abhishek622/movieapp/metadata/internal/controller/metadata"
 	grpchandler "github.com/abhishek622/movieapp/metadata/internal/handler/grpc"
 	"github.com/abhishek622/movieapp/metadata/internal/repository/memory"
-	"github.com/abhishek622/movieapp/metadata/internal/repository/mysql"
 	"github.com/abhishek622/movieapp/pkg/discovery"
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"google.golang.org/grpc"
@@ -23,7 +22,7 @@ import (
 const serviceName = "metadata"
 
 func main() {
-	f, err := os.Open("default.yaml")
+	f, err := os.Open("base.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +38,7 @@ func main() {
 	}
 	ctx := context.Background()
 	instanceID := discovery.GenerateInstanceID(serviceName)
-	if err := registry.Register(ctx, instanceID, serviceName, fmt.Sprintf("metadata:%d", port)); err != nil {
+	if err := registry.Register(ctx, instanceID, serviceName, fmt.Sprintf("localhost:%d", port)); err != nil {
 		panic(err)
 	}
 	go func() {
@@ -51,12 +50,8 @@ func main() {
 		}
 	}()
 	defer registry.Deregister(ctx, instanceID, serviceName)
-	repo, err := mysql.New()
-	if err != nil {
-		panic(err)
-	}
-	cache := memory.New()
-	ctrl := metadata.New(repo, cache)
+	repo := memory.New()
+	ctrl := metadata.New(repo)
 	h := grpchandler.New(ctrl)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%v", port))
 	if err != nil {
