@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net"
@@ -14,7 +16,9 @@ import (
 	grpchandler "github.com/abhishek622/movieapp/movie/internal/handler/grpc"
 	"github.com/abhishek622/movieapp/pkg/discovery"
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +26,7 @@ import (
 const serviceName = "movie"
 
 func main() {
-	f, err := os.Open("default.yaml")
+	f, err := os.Open("configs/default.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -46,14 +50,49 @@ func main() {
 	ratingGateway := ratinggateway.New(registry)
 	ctrl := movie.New(ratingGateway, metadataGateway)
 	h := grpchandler.New(ctrl)
+	serverCert, err := tls.LoadX509KeyPair("configs/movie-cert.pem", "configs/movie-key.pem")
+	if err != nil {
+		log.Fatalf("Failed to load server certificate and key: %v", err)
+	}
+	caCert, err := os.ReadFile("configs/ca-cert.pem")
+	if err != nil {
+		log.Fatalf("Failed to read CA certificate: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caCert) {
+		log.Fatalf("Failed to append CA certificate")
+	}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientCAs:    certPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS13,
+	}
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	srv := grpc.NewServer()
+	// const limit = 100
+	// const burst = 100
+	// l := newLimiter(limit, burst)
+	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig))) //  grpc.UnaryInterceptor(ratelimit.UnaryServerInterceptor(l))
+
 	reflection.Register(srv)
 	gen.RegisterMovieServiceServer(srv, h)
+
 	if err := srv.Serve(lis); err != nil {
 		panic(err)
 	}
+}
+
+type limiter struct {
+	l *rate.Limiter
+}
+
+func newLimiter(limit int, burst int) *limiter {
+	return &limiter{rate.NewLimiter(rate.Limit(limit), burst)}
+}
+
+func (l *limiter) Limit() bool {
+	return l.l.Allow()
 }

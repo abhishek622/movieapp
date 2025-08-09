@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net"
@@ -15,6 +17,7 @@ import (
 	grpchandler "github.com/abhishek622/movieapp/rating/internal/handler/grpc"
 	"github.com/abhishek622/movieapp/rating/internal/repository/memory"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +25,7 @@ import (
 const serviceName = "rating"
 
 func main() {
-	f, err := os.Open("default.yaml")
+	f, err := os.Open("configs/default.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -54,11 +57,29 @@ func main() {
 	repo := memory.New()
 	ctrl := rating.New(repo, nil)
 	h := grpchandler.New(ctrl)
+	serverCert, err := tls.LoadX509KeyPair("configs/rating-cert.pem", "configs/rating-key.pem")
+	if err != nil {
+		log.Fatalf("Failed to load server certificate and key: %v", err)
+	}
+	caCert, err := os.ReadFile("configs/ca-cert.pem")
+	if err != nil {
+		log.Fatalf("Failed to read CA certificate: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caCert) {
+		log.Fatalf("Failed to append CA certificate")
+	}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientCAs:    certPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS13,
+	}
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%v", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
 	reflection.Register(srv)
 	gen.RegisterRatingServiceServer(srv, h)
 	if err := srv.Serve(lis); err != nil {

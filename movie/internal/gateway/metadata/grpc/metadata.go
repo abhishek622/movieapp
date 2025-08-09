@@ -7,18 +7,20 @@ import (
 	"github.com/abhishek622/movieapp/internal/grpcutil"
 	"github.com/abhishek622/movieapp/metadata/pkg/model"
 	"github.com/abhishek622/movieapp/pkg/discovery"
+	"google.golang.org/grpc/credentials"
 )
 
 type Gateway struct {
 	registry discovery.Registry
+	creds    credentials.TransportCredentials
 }
 
-func New(registry discovery.Registry) *Gateway {
-	return &Gateway{registry}
+func New(registry discovery.Registry, creds credentials.TransportCredentials) *Gateway {
+	return &Gateway{registry, creds}
 }
 
 func (g *Gateway) Get(ctx context.Context, id string) (*model.Metadata, error) {
-	conn, err := grpcutil.ServiceConnection(ctx, "metadata", g.registry)
+	conn, err := grpcutil.ServiceConnection(ctx, "metadata", g.registry, g.creds)
 	if err != nil {
 		return nil, err
 	}
