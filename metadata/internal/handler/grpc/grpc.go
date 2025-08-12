@@ -29,9 +29,9 @@ func (h *Handler) GetMetadata(ctx context.Context, req *gen.GetMetadataRequest) 
 	}
 	m, err := h.ctrl.Get(ctx, req.MovieId)
 	if err != nil && errors.Is(err, metadata.ErrNotFound) {
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Errorf(codes.NotFound, "%s", err.Error())
 	} else if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 	return &gen.GetMetadataResponse{Metadata: model.MetadataToProto(m)}, nil
 }

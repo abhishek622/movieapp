@@ -16,6 +16,7 @@ import (
 	grpchandler "github.com/abhishek622/movieapp/movie/internal/handler/grpc"
 	"github.com/abhishek622/movieapp/pkg/discovery"
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
+	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -72,10 +73,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	// const limit = 100
-	// const burst = 100
-	// l := newLimiter(limit, burst)
-	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig))) //  grpc.UnaryInterceptor(ratelimit.UnaryServerInterceptor(l))
+	const limit = 100
+	const burst = 100
+	l := newLimiter(limit, burst)
+	srv := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.UnaryInterceptor(ratelimit.UnaryServerInterceptor(l)))
 
 	reflection.Register(srv)
 	gen.RegisterMovieServiceServer(srv, h)
