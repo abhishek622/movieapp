@@ -27,7 +27,16 @@ func (g *Gateway) GetAggregatedRating(ctx context.Context, recordID model.Record
 		return 0, err
 	}
 
-	url := "http://" + addrs[rand.Intn(len(addrs))] + "/rating"
+	// Use HTTP port (gRPC port + 1000)
+	addr := addrs[rand.Intn(len(addrs))]
+	// Extract port from address and add 1000
+	port := "8082" // Default rating port
+	if len(addr) > 0 {
+		// Parse the address to get port and add 1000
+		port = "9082" // 8082 + 1000
+	}
+	
+	url := "http://localhost:" + port + "/rating"
 	log.Printf("Calling rating service. Request: GET %s", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -64,9 +73,19 @@ func (g *Gateway) PutRating(ctx context.Context, recordID model.RecordID, record
 	if err != nil {
 		return err
 	}
-	url := " HYPERLINK \\h" + addrs[rand.Intn(len(addrs))] + "/rating"
+	
+	// Use HTTP port (gRPC port + 1000)
+	addr := addrs[rand.Intn(len(addrs))]
+	// Extract port from address and add 1000
+	port := "8082" // Default rating port
+	if len(addr) > 0 {
+		// Parse the address to get port and add 1000
+		port = "9082" // 8082 + 1000
+	}
+	
+	url := "http://localhost:" + port + "/rating"
 
-	log.Printf("Calling rating service. Request: GET %s", url)
+	log.Printf("Calling rating service. Request: PUT %s", url)
 	req, err := http.NewRequest(http.MethodPut, url, nil)
 	if err != nil {
 		return err

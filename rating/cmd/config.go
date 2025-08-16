@@ -3,6 +3,7 @@ package main
 type config struct {
 	API              apiConfig              `yaml:"api"`
 	ServiceDiscovery serviceDiscoveryConfig `yaml:"serviceDiscovery"`
+	Jaeger           jaegerConfig           `yaml:"jaeger"`
 }
 
 type apiConfig struct {
@@ -15,4 +16,9 @@ type serviceDiscoveryConfig struct {
 
 type consulConfig struct {
 	Address string `yaml:"address"`
+}
+
+type jaegerConfig struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
 }

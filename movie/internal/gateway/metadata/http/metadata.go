@@ -27,7 +27,16 @@ func (g *Gateway) Get(ctx context.Context, id string) (*model.Metadata, error) {
 		return nil, err
 	}
 
-	url := "http://" + addrs[rand.Intn(len(addrs))] + "/metadata"
+	// Use HTTP port (gRPC port + 1000)
+	addr := addrs[rand.Intn(len(addrs))]
+	// Extract port from address and add 1000
+	port := "9081" // 8081 + 1000 for metadata service
+	if len(addr) > 0 {
+		// Parse the address to get port and add 1000
+		port = "9081" // 8081 + 1000
+	}
+
+	url := "http://localhost:" + port + "/metadata"
 	log.Printf("Calling metadata service. Request: GET %s", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

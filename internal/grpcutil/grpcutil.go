@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/abhishek622/movieapp/pkg/discovery"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -15,5 +16,9 @@ func ServiceConnection(ctx context.Context, serviceName string, registry discove
 		return nil, err
 	}
 
-	return grpc.NewClient(addrs[rand.Intn(len(addrs))], grpc.WithTransportCredentials(creds))
+	return grpc.NewClient(
+		addrs[rand.Intn(len(addrs))],
+		grpc.WithTransportCredentials(creds),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 }

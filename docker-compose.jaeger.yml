@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.9.0
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "14250:14250" # gRPC collector
+      - "14268:14268" # HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_OTLP_GRPC_ENABLED=true
+      - COLLECTOR_OTLP_HTTP_ENABLED=true
+    networks:
+      - jaeger-network
+
+networks:
+  jaeger-network:
+    driver: bridge

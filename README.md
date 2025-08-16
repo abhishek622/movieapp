@@ -19,3 +19,10 @@ docker start dev-consul
 ```bash
 docker stop dev-consul
 ```
+
+### To make request in movie service
+
+```bash
+grpcurl -cacert temp-certs/ca-cert.pem -cert temp-certs/movie-cert.pem -key temp-certs/movie-key.pem -d '{"movie_id":"1"}' localhost:8083 MovieService.GetMovieDetails
+
+```

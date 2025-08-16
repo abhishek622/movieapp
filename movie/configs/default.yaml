@@ -3,3 +3,6 @@ api:
 serviceDiscovery:
   consul:
     address: localhost:8500
+jaeger:
+  host: localhost
+  port: 14268
