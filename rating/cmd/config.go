@@ -4,6 +4,7 @@ type config struct {
 	API              apiConfig              `yaml:"api"`
 	ServiceDiscovery serviceDiscoveryConfig `yaml:"serviceDiscovery"`
 	Jaeger           jaegerConfig           `yaml:"jaeger"`
+	Prometheus       prometheusConfig       `yaml:"prometheus"`
 }
 
 type apiConfig struct {
@@ -21,4 +22,8 @@ type consulConfig struct {
 type jaegerConfig struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`
+}
+
+type prometheusConfig struct {
+	MetricsPort int `yaml:"metricsPort"`
 }

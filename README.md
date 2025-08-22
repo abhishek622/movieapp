@@ -26,3 +26,9 @@ docker stop dev-consul
 grpcurl -cacert temp-certs/ca-cert.pem -cert temp-certs/movie-cert.pem -key temp-certs/movie-key.pem -d '{"movie_id":"1"}' localhost:8083 MovieService.GetMovieDetails
 
 ```
+
+### To install prometheus
+
+```bash
+docker run -p 9090:9090 -v configs:/etc/prometheus prom/prometheus
+```

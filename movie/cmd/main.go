@@ -6,10 +6,12 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/abhishek622/movieapp/gen"
 	"github.com/abhishek622/movieapp/movie/internal/controller/movie"
@@ -21,6 +23,8 @@ import (
 	"github.com/abhishek622/movieapp/pkg/tracing"
 	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
@@ -73,6 +77,24 @@ func main() {
 	// Set global tracer for the application
 	opentracing.SetGlobalTracer(tracer)
 	logger.Info("Jaeger tracer initialized successfully", zap.String("service", serviceName))
+
+	// metrics reporting
+	reporter := prometheus.NewReporter(prometheus.Options{})
+	scope, closer := tally.NewRootScope(tally.ScopeOptions{
+		Tags:           map[string]string{"service": serviceName},
+		CachedReporter: reporter,
+	}, 10*time.Second)
+	defer closer.Close()
+
+	http.Handle("/metrics", reporter.HTTPHandler())
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Prometheus.MetricsPort), nil); err != nil {
+			logger.Fatal("Failed to start the metrics handler", zap.Error(err))
+		}
+	}()
+
+	counter := scope.Tagged(map[string]string{"service": serviceName}).Counter("service_started")
+	counter.Inc(1)
 
 	// --- Service registration ---
 	instanceID := discovery.GenerateInstanceID(serviceName)

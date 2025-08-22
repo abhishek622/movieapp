@@ -6,3 +6,5 @@ serviceDiscovery:
 jaeger:
   host: localhost
   port: 14268
+prometheus:
+  metricsPort: 8091

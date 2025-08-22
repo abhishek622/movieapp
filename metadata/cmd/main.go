@@ -22,6 +22,8 @@ import (
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"github.com/abhishek622/movieapp/pkg/tracing"
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -73,6 +75,25 @@ func main() {
 	// Set global tracer for the application
 	opentracing.SetGlobalTracer(tracer)
 	logger.Info("Jaeger tracer initialized successfully", zap.String("service", serviceName))
+
+	// metrics reporting
+	reporter := prometheus.NewReporter(prometheus.Options{})
+	scope, closer := tally.NewRootScope(tally.ScopeOptions{
+		Tags:           map[string]string{"service": serviceName},
+		CachedReporter: reporter,
+	}, 10*time.Second)
+	defer closer.Close()
+	http.Handle("/metrics", reporter.HTTPHandler())
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Prometheus.MetricsPort), nil); err != nil {
+			logger.Fatal("Failed to start the metrics handler", zap.Error(err))
+		}
+	}()
+
+	counter := scope.Tagged(map[string]string{
+		"service": serviceName,
+	}).Counter("service_started")
+	counter.Inc(1)
 
 	// --- Service registration / health heartbeat ---
 	instanceID := discovery.GenerateInstanceID(serviceName)
