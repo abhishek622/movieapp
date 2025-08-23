@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/abhishek622/movieapp/gen"
 	"github.com/abhishek622/movieapp/metadata/internal/controller/metadata"
 	grpchandler "github.com/abhishek622/movieapp/metadata/internal/handler/grpc"
@@ -22,8 +24,8 @@ import (
 	"github.com/abhishek622/movieapp/pkg/discovery/consul"
 	"github.com/abhishek622/movieapp/pkg/tracing"
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber-go/tally"
-	"github.com/uber-go/tally/prometheus"
+	"github.com/uber-go/tally/v4"
+	"github.com/uber-go/tally/v4/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -37,6 +39,18 @@ const serviceName = "metadata"
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
+
+	// simulateCPULoad := flag.Bool("simulatecpuload", false, "simulate CPU load for profiling")
+	// flag.Parse()
+	// if *simulateCPULoad {
+	// 	go heavyOperation()
+	// }
+
+	// go func() {
+	// 	if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+	// 		logger.Fatal("Failed to start profiler handler", zap.Error(err))
+	// 	}
+	// }()
 
 	f, err := os.Open("configs/default.yaml")
 	if err != nil {
@@ -81,6 +95,22 @@ func main() {
 	scope, closer := tally.NewRootScope(tally.ScopeOptions{
 		Tags:           map[string]string{"service": serviceName},
 		CachedReporter: reporter,
+		Separator:      prometheus.DefaultSeparator,
+		SanitizeOptions: &tally.SanitizeOptions{
+			NameCharacters: tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_', ':'},
+			},
+			KeyCharacters: tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_'},
+			},
+			ValueCharacters: tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_', ':', '.', '-'},
+			},
+			ReplacementCharacter: '_',
+		},
 	}, 10*time.Second)
 	defer closer.Close()
 	http.Handle("/metrics", reporter.HTTPHandler())
@@ -113,7 +143,7 @@ func main() {
 	// --- gRPC server (mTLS) ---
 	repo := memory.New()
 	ctrl := metadata.New(repo)
-	h := grpchandler.New(ctrl)
+	h := grpchandler.New(ctrl, scope)
 	httpHandler := httphandler.New(ctrl)
 	serverCert, err := tls.LoadX509KeyPair("configs/metadata-cert.pem", "configs/metadata-key.pem")
 	if err != nil {
@@ -183,3 +213,11 @@ func main() {
 
 	wg.Wait()
 }
+
+// func heavyOperation() {
+// 	for {
+// 		token := make([]byte, 1024)
+// 		rand.Read(token)
+// 		md5.New().Write(token)
+// 	}
+// }

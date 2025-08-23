@@ -23,8 +23,8 @@ import (
 	"github.com/abhishek622/movieapp/pkg/tracing"
 	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber-go/tally"
-	"github.com/uber-go/tally/prometheus"
+	"github.com/uber-go/tally/v4"
+	"github.com/uber-go/tally/v4/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
@@ -81,8 +81,24 @@ func main() {
 	// metrics reporting
 	reporter := prometheus.NewReporter(prometheus.Options{})
 	scope, closer := tally.NewRootScope(tally.ScopeOptions{
-		Tags:           map[string]string{"service": serviceName},
-		CachedReporter: reporter,
+		Tags:            map[string]string{"service": serviceName},
+		CachedReporter:  reporter,
+		Separator:       prometheus.DefaultSeparator,
+		SanitizeOptions: &tally.SanitizeOptions{
+			NameCharacters:       tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_', ':'},
+			},
+			KeyCharacters:       tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_'},
+			},
+			ValueCharacters:     tally.ValidCharacters{
+				Ranges:     tally.AlphanumericRange,
+				Characters: []rune{'_', ':', '.', '-'},
+			},
+			ReplacementCharacter: '_',
+		},
 	}, 10*time.Second)
 	defer closer.Close()
 

@@ -11,5 +11,5 @@ import (
 func NewTestMetadataGRPCServer() gen.MetadataServiceServer {
 	r := memory.New()
 	ctrl := metadata.New(r)
-	return grpchandler.New(ctrl)
+	return grpchandler.New(ctrl, nil)
 }

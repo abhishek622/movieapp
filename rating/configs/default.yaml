@@ -7,4 +7,4 @@ jaeger:
   host: localhost
   port: 6831
 prometheus:
-  metricsPort: 8091
+  metricsPort: 8092
