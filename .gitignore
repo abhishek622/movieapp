@@ -33,5 +33,6 @@ go.work.sum
 # .vscode/
 
 # certificates to skip
-ca-cert.srl
-ca-key.pem
+*.srl
+*.pem
+*.csr
